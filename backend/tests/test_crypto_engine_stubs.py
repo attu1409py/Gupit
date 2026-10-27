@@ -1,9 +1,4 @@
-"""Tests verifying cryptographic function stubs and exception hierarchy.
-
-Ensures that:
-1. All Phase 1 crypto functions raise NotImplementedError rather than mock or fake crypto.
-2. The exception hierarchy matches specification.
-"""
+"""Tests verifying cryptographic exception hierarchy and baseline contract types."""
 
 import pytest
 from backend.app.services.crypto_engine import (
@@ -14,13 +9,8 @@ from backend.app.services.crypto_engine import (
     FileSizeLimitExceededError,
     SignatureVerificationError,
     DecryptionAuthenticationError,
+    KeyPairPEM,
     generate_rsa_keypair,
-    compute_public_key_fingerprint,
-    protect_private_key,
-    unprotect_private_key,
-    validate_file_metadata,
-    create_encrypted_package,
-    verify_and_decrypt_package,
 )
 
 
@@ -34,37 +24,14 @@ def test_exception_hierarchy():
     assert issubclass(DecryptionAuthenticationError, CryptoEngineError)
 
 
-def test_crypto_stubs_raise_not_implemented():
-    """Verify that placeholder functions raise NotImplementedError in Phase 1."""
-    with pytest.raises(NotImplementedError):
-        generate_rsa_keypair()
+def test_keypair_pem_namedtuple():
+    """Verify KeyPairPEM structure."""
+    kp = KeyPairPEM(public_pem="pub", private_pem="priv")
+    assert kp.public_pem == "pub"
+    assert kp.private_pem == "priv"
 
-    with pytest.raises(NotImplementedError):
-        compute_public_key_fingerprint("dummy_pem")
 
-    with pytest.raises(NotImplementedError):
-        protect_private_key("dummy_pem", b"0" * 32)
-
-    with pytest.raises(NotImplementedError):
-        unprotect_private_key(b"blob", b"0" * 32)
-
-    with pytest.raises(NotImplementedError):
-        validate_file_metadata("test.txt", b"content")
-
-    with pytest.raises(NotImplementedError):
-        create_encrypted_package(
-            file_bytes=b"test",
-            original_filename="test.txt",
-            content_type="text/plain",
-            sender_signing_private_pem="pem",
-            recipient_encryption_public_pem="pem",
-            sender_user_id="usr_1",
-            recipient_user_id="usr_2",
-        )
-
-    with pytest.raises(NotImplementedError):
-        verify_and_decrypt_package(
-            package_bytes=b"GUPIT...",
-            sender_signing_public_pem="pem",
-            recipient_encryption_private_pem="pem",
-        )
+def test_rsa_key_generation_minimum_size():
+    """Verify key generation rejects bit sizes under 2048."""
+    with pytest.raises(ValueError, match="at least 2048 bits"):
+        generate_rsa_keypair(key_size_bits=1024)
